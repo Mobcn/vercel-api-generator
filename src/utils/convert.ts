@@ -67,8 +67,8 @@ const tableInfo2codeText = (() => {
                 if (props.type === 'String' && props.default != null) {
                     replace.default = stringMark + props.default.replace(/"/g, quoteMark) + stringMark;
                 } else if (props.type === 'Date') {
-                    props.min && (replace.min = stringMark + props.min + stringMark);
-                    props.max && (replace.max = stringMark + props.max + stringMark);
+                    replace.min = props.min ? stringMark + props.min + stringMark : undefined;
+                    replace.max = props.max ? stringMark + props.max + stringMark : undefined;
                 }
                 newProperty[name] = Object.assign({}, props, replace);
             });
