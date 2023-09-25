@@ -66,10 +66,10 @@ async function write(fileHandle: FileSystemFileHandle, data: FileSystemWriteChun
     const writable = await fileHandle.createWritable({ keepExistingData: isAppend });
     if (isAppend) {
         const file = await fileHandle.getFile();
-        writable.seek(file.size);
+        await writable.seek(file.size);
     }
-    writable.write(data);
-    writable.close();
+    await writable.write(data);
+    await writable.close();
     return true;
 }
 

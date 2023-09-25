@@ -340,22 +340,22 @@ export type RowVO = {
                         content="保存"
                         @click="() => save()"
                     ></VxeButton>
-                    <VxeButton
-                        v-if="!isModify && canGenerate"
-                        status="primary"
-                        icon="vxe-icon-save"
-                        content="生成文件"
-                        @click="generate"
-                    ></VxeButton>
                 </template>
                 <template #tools>
-                    <VxeButton v-if="isModify" icon="vxe-icon-repeat" circle title="重置" @click="revert"></VxeButton>
+                    <VxeButton v-if="isModify" icon="vxe-icon-repeat" title="重置" circle @click="revert"></VxeButton>
                     <VxeButton
                         v-if="!isModify && Object.keys(tableInfo.property).length > 0"
                         icon="vxe-icon-eye-fill"
-                        circle
                         title="预览"
+                        circle
                         @click="preview"
+                    ></VxeButton>
+                    <VxeButton
+                        v-if="!isModify && canGenerate"
+                        icon="vxe-icon-flow-branch"
+                        title="生成文件"
+                        circle
+                        @click="generate"
                     ></VxeButton>
                 </template>
             </VxeToolbar>

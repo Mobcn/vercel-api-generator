@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { computed, ref, watchEffect } from 'vue';
+import { computed, provide, ref, watchEffect } from 'vue';
 import SideList from './components/SideList.vue';
 import MainTable from './components/MainTable.vue';
+import Loading from './components/modal/Loading.vue';
 
 /** 临时表信息 */
 const tmpTableInfo: TableInfo = { module: '<tmp>', model: '<Tmp>', table: '<tmp>', property: {} };
@@ -16,6 +17,14 @@ const sideListRef = ref<{
 }>();
 /** 主表元素对象 */
 const mainTableRef = ref<{ checkSave: () => Promise<boolean> }>();
+
+// 加载
+const loadding = ref(false);
+const loaddingProps = ref<{
+    title?: string;
+    width?: string | number;
+    height?: string | number;
+}>({});
 
 /** 是否可以生成文件 */
 const canGenerate = computed(() => {
@@ -32,6 +41,16 @@ watchEffect(() => {
         tmpTableInfo.property = currentTableInfo.value.property;
     }
 });
+
+/**
+ * 全局Loading设置
+ *
+ * @param value loading是否显示
+ * @param props loading参数
+ */
+function setLoading(value: boolean, props?: typeof loaddingProps.value) {
+    (loadding.value = value) && (loaddingProps.value = props ?? {});
+}
 
 /**
  * 编辑表字段属性
@@ -55,9 +74,11 @@ async function editProperty(tableInfo?: TableInfo, backFun?: Function) {
  *
  * @param tableInfo 表信息
  */
-function saveTable(tableInfo: TableInfo) {
+async function saveTable(tableInfo: TableInfo) {
     if (tableInfo.module !== tmpTableInfo.module) {
-        sideListRef.value?.saveTable(tableInfo);
+        setLoading(true, { title: '保存中...' });
+        await sideListRef.value?.saveTable(tableInfo);
+        setLoading(false);
     }
 }
 
@@ -72,6 +93,9 @@ function generate(tableInfo: TableInfo, cover?: boolean) {
         sideListRef.value?.generate(tableInfo, cover);
     }
 }
+
+// 全局Loading设置
+provide('setLoading', setLoading);
 </script>
 <script lang="ts">
 /** 表字段类型 */
@@ -134,6 +158,12 @@ export type TableInfo = {
                 @generate="generate"
             />
         </div>
+        <Loading
+            v-model="loadding"
+            :title="loaddingProps.title"
+            :width="loaddingProps.width"
+            :height="loaddingProps.height"
+        />
     </div>
 </template>
 

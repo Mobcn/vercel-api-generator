@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, inject, reactive, ref } from 'vue';
 import { VXETable, VxeTableEvents, VxeTablePropTypes } from 'vxe-table';
 import { openDirectoryPicker } from '../utils/file-system';
-import { listModel, saveModel, generateDAOAndService } from '../utils/file-access';
+import { listModel, saveModel, removeModel, generateDAOAndService } from '../utils/file-access';
 import AddTableModal from './modal/AddTable.vue';
 import type { TableInfo } from '../App.vue';
 
@@ -11,6 +11,16 @@ const emits = defineEmits<{
     /** 编辑表 */
     editTableInfo: [tableInfo?: TableInfo, cb?: Function];
 }>();
+
+/** 全局Loading设置 */
+const setLoading = inject('setLoading') as (
+    value: boolean,
+    props?: {
+        title?: string;
+        width?: string | number;
+        height?: string | number;
+    }
+) => void;
 
 /** 连接根句柄 */
 const rootHandle = ref<FileSystemDirectoryHandle | null>(null);
@@ -50,7 +60,7 @@ const menuConfig = reactive<VxeTablePropTypes.MenuConfig<TableInfo>>({
             ],
             [
                 { code: 'generate', name: '文件生成' },
-                { code: 'generate-cover', name: '文件生成(覆盖)' }
+                { code: 'generate-cover', name: '文件生成（覆盖）' }
             ]
         ]
     },
@@ -85,10 +95,12 @@ const contextMenuClickEvent: VxeTableEvents.MenuClick<TableInfo> = ({ $table, me
             break;
         case 'remove':
             const index = tableAll.value.findIndex((item) => item.module === row.module && item.table === row.table);
-            if (row === $table.getCurrentRecord()) {
-                emits('editTableInfo');
-            }
-            tableAll.value.splice(index, 1);
+            row === $table.getCurrentRecord() && emits('editTableInfo');
+            setLoading(true, { title: '删除中...' });
+            removeModel(rootHandle.value!, row).then(() => {
+                tableAll.value.splice(index, 1);
+                setLoading(false);
+            });
             break;
         case 'generate':
             generate(row);
@@ -159,7 +171,9 @@ async function saveTable(tableInfo: TableInfo) {
  * @param cover 是否覆盖
  */
 async function generate(tableInfo: TableInfo, cover?: boolean) {
-    return await generateDAOAndService(rootHandle.value!, tableInfo, cover);
+    setLoading(true, { title: '生成文件中...' });
+    await generateDAOAndService(rootHandle.value!, tableInfo, cover);
+    setLoading(false);
 }
 
 /**

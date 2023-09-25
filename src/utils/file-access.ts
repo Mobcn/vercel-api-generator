@@ -62,6 +62,48 @@ async function saveModel(handle: FileSystemDirectoryHandle, tableInfo: TableInfo
 }
 
 /**
+ * 删除模型及相关文件
+ *
+ * @param handle 目录句柄
+ * @param tableInfo 表信息
+ */
+async function removeModel(handle: FileSystemDirectoryHandle, tableInfo: TableInfo) {
+    if (tableInfo.module === undefined) {
+        throw new Error('模块名不存在!');
+    }
+
+    const [daoHandle, serviceHandle] = await Promise.all([
+        handle.getDirectoryHandle('dao'),
+        handle.getDirectoryHandle('service')
+    ]);
+
+    const promiseList: Promise<void>[] = [];
+
+    // 删除Service文件
+    promiseList.push(
+        (async () => {
+            const serviceModuleHandle = await serviceHandle.getDirectoryHandle(tableInfo.module!);
+            await serviceModuleHandle.removeEntry(tableInfo.model + 'Service.js');
+        })()
+    );
+
+    const daoModuleHandle = await daoHandle.getDirectoryHandle(tableInfo.module!);
+
+    // 删除Model文件
+    promiseList.push(
+        (async () => {
+            const daoModelHandle = await daoModuleHandle.getDirectoryHandle('model', { create: true });
+            await daoModelHandle.removeEntry(tableInfo.model + 'Model.js');
+        })()
+    );
+
+    // 删除DAO文件
+    promiseList.push(daoModuleHandle.removeEntry(tableInfo.model + 'DAO.js'));
+
+    await Promise.all(promiseList);
+}
+
+/**
  * 生成DAO文件和服务文件
  *
  * @param handle 目录句柄
@@ -73,31 +115,45 @@ async function generateDAOAndService(handle: FileSystemDirectoryHandle, tableInf
         throw new Error('模块名不存在!');
     }
 
+    const promiseList: Promise<void>[] = [];
+
     // 生成DAO文件
-    const daoHandle = await handle.getDirectoryHandle('dao', { create: true });
-    const daoModuleHandle = await daoHandle.getDirectoryHandle(tableInfo.module, { create: true });
-    const daoFileName = tableInfo.model + 'DAO.js';
-    let daoFileHandle: FileSystemFileHandle;
-    try {
-        daoFileHandle = await daoModuleHandle.getFileHandle(daoFileName);
-        cover && write(daoFileHandle, getDAOFileText(tableInfo.module, tableInfo.model), false);
-    } catch (error) {
-        daoFileHandle = await daoModuleHandle.getFileHandle(daoFileName, { create: true });
-        write(daoFileHandle, getDAOFileText(tableInfo.module, tableInfo.model), false);
-    }
+    promiseList.push(
+        (async () => {
+            const daoHandle = await handle.getDirectoryHandle('dao', { create: true });
+            const daoModuleHandle = await daoHandle.getDirectoryHandle(tableInfo.module!, { create: true });
+            const daoFileName = tableInfo.model + 'DAO.js';
+            const daoFileText = getDAOFileText(tableInfo.module!, tableInfo.model);
+            let daoFileHandle: FileSystemFileHandle;
+            try {
+                daoFileHandle = await daoModuleHandle.getFileHandle(daoFileName);
+                cover && (await write(daoFileHandle, daoFileText, false));
+            } catch (error) {
+                daoFileHandle = await daoModuleHandle.getFileHandle(daoFileName, { create: true });
+                await write(daoFileHandle, daoFileText, false);
+            }
+        })()
+    );
 
     // 生成Serice文件
-    const serviceHandle = await handle.getDirectoryHandle('service', { create: true });
-    const serviceModuleHandle = await serviceHandle.getDirectoryHandle(tableInfo.module, { create: true });
-    const serviceFileName = tableInfo.model + 'Service.js';
-    let serviceFileHandle: FileSystemFileHandle;
-    try {
-        serviceFileHandle = await serviceModuleHandle.getFileHandle(serviceFileName);
-        cover && write(serviceFileHandle, getServiceFileText(tableInfo.module, tableInfo.model), false);
-    } catch (error) {
-        serviceFileHandle = await serviceModuleHandle.getFileHandle(serviceFileName, { create: true });
-        write(serviceFileHandle, getServiceFileText(tableInfo.module, tableInfo.model), false);
-    }
+    promiseList.push(
+        (async () => {
+            const serviceHandle = await handle.getDirectoryHandle('service', { create: true });
+            const serviceModuleHandle = await serviceHandle.getDirectoryHandle(tableInfo.module!, { create: true });
+            const serviceFileName = tableInfo.model + 'Service.js';
+            const serviceFileText = getServiceFileText(tableInfo.module!, tableInfo.model);
+            let serviceFileHandle: FileSystemFileHandle;
+            try {
+                serviceFileHandle = await serviceModuleHandle.getFileHandle(serviceFileName);
+                cover && (await write(serviceFileHandle, serviceFileText, false));
+            } catch (error) {
+                serviceFileHandle = await serviceModuleHandle.getFileHandle(serviceFileName, { create: true });
+                await write(serviceFileHandle, serviceFileText, false);
+            }
+        })()
+    );
+
+    await Promise.all(promiseList);
 }
 
-export { listModel, saveModel, generateDAOAndService };
+export { listModel, saveModel, removeModel, generateDAOAndService };
