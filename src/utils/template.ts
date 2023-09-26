@@ -13,6 +13,10 @@ function getModelFileText(info: string, model: string = '') {
 const info = ${info};
 
 export const Model = mongoose.model(info.model, new Schema(info.property), info.table);
+
+/**
+ * @typedef {import('#dao/BaseDAO').RawDocType<typeof Model>} ${model}
+ */
 `;
 }
 
