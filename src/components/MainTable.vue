@@ -166,6 +166,7 @@ async function save(data?: RowVO[], info?: TableInfo) {
                     type: item.type
                 };
                 item.required && (field.required = item.required);
+                item.unique && (field.unique = item.unique);
                 item.default != null && (field.default = item.default);
                 if (item.type === 'String') {
                     item.lowercase && (field.lowercase = item.lowercase);
