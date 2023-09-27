@@ -51,15 +51,42 @@ async function listModel(handle: FileSystemDirectoryHandle): Promise<TableInfo[]
  *
  * @param handle 目录句柄
  * @param tableInfo 表信息
+ * @param callback 完成回调
  */
-async function saveModel(handle: FileSystemDirectoryHandle, tableInfo: TableInfo) {
-    const dirHandle = await handle.getDirectoryHandle('dao', { create: true });
-    const moduleHandle = await dirHandle.getDirectoryHandle(tableInfo.module!, { create: true });
-    const modelHandle = await moduleHandle.getDirectoryHandle('model', { create: true });
-    const fileHandle = await modelHandle.getFileHandle(tableInfo.model + 'Model.js', { create: true });
-    const fileText = getModelFileText(tableInfo2codeText(tableInfo, ['model', 'table', 'property']), tableInfo.model);
-    return await write(fileHandle, fileText, false);
-}
+const saveModel = (() => {
+    const waitMap = new Map<string, Promise<void> | string>();
+    const run = async (
+        key: string,
+        handle: FileSystemFileHandle,
+        data: FileSystemWriteChunkType,
+        callback?: () => void
+    ) => {
+        await write(handle, data, false);
+        const value = waitMap.get(key);
+        if (typeof value === 'string') {
+            const promise = run(key, handle, value, callback);
+            waitMap.set(key, promise);
+            await promise;
+        } else {
+            waitMap.delete(key);
+            callback && callback();
+        }
+    };
+    return async function (handle: FileSystemDirectoryHandle, tableInfo: TableInfo, callback?: () => void) {
+        const dirHandle = await handle.getDirectoryHandle('dao', { create: true });
+        const moduleHandle = await dirHandle.getDirectoryHandle(tableInfo.module!, { create: true });
+        const modelHandle = await moduleHandle.getDirectoryHandle('model', { create: true });
+        const fileHandle = await modelHandle.getFileHandle(tableInfo.model + 'Model.js', { create: true });
+        const codeText = tableInfo2codeText(tableInfo, ['model', 'table', 'property']);
+        const fileText = getModelFileText(codeText, tableInfo.model);
+        const key = tableInfo.module! + '_' + tableInfo.table;
+        if (waitMap.has(key)) {
+            waitMap.set(key, fileText);
+        } else {
+            waitMap.set(key, run(key, fileHandle, fileText, callback));
+        }
+    };
+})();
 
 /**
  * 删除模型及相关文件

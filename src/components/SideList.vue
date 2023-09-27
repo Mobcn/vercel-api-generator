@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { computed, inject, reactive, ref } from 'vue';
-import { VXETable, VxeTableEvents, VxeTablePropTypes } from 'vxe-table';
+import { VXETable } from 'vxe-table';
 import { openDirectoryPicker } from '../utils/file-system';
 import { listModel, saveModel, removeModel, generateDAOAndService } from '../utils/file-access';
 import AddTableModal from './modal/AddTable.vue';
+import type { VxeTableEvents, VxeTableInstance, VxeTablePropTypes } from 'vxe-table';
 import type { TableInfo } from '../App.vue';
 
 /** 回调 */
@@ -30,6 +31,9 @@ const tableAll = ref<TableInfo[]>([]);
 /** 当前筛选模块 */
 const currentModule = ref<string>();
 
+/** 表同步列表 */
+const syncList = reactive<TableInfo[]>([]);
+
 /** 表模块列表 */
 const moduleList = computed<string[]>(() => {
     const set = new Set<string>(tableAll.value.map((item) => item.module!));
@@ -43,6 +47,8 @@ const tableList = computed<TableInfo[]>(() => {
     return tableAll.value;
 });
 
+/** 新建表弹窗元素对象 */
+const tableRef = ref<VxeTableInstance<TableInfo>>();
 /** 新建表弹窗元素对象 */
 const addModal = ref();
 
@@ -158,10 +164,15 @@ function addTable(props: { module: string; model: string; table: string }) {
  * @param tableInfo 表信息
  */
 async function saveTable(tableInfo: TableInfo) {
-    const result = await saveModel(rootHandle.value!, tableInfo);
-    if (!result) {
+    const { tableData } = tableRef.value!.getTableData();
+    const row = tableData.find((row) => row.module === tableInfo.module && row.table === tableInfo.table);
+    row && !syncList.includes(row) && syncList.push(row);
+    await saveModel(rootHandle.value!, tableInfo, () => {
+        const index = syncList.findIndex((item) => item === row);
+        index !== -1 && syncList.splice(index, 1);
+    }).catch(() => {
         VXETable.modal.message({ content: '保存失败!', status: 'error' });
-    }
+    });
 }
 
 /**
@@ -213,6 +224,7 @@ defineExpose({ isConnect, saveTable, generate });
         </div>
         <div class="flex-1 h-0">
             <VxeTable
+                ref="tableRef"
                 height="auto"
                 size="mini"
                 :row-config="{ isCurrent: true, isHover: true }"
@@ -224,7 +236,8 @@ defineExpose({ isConnect, saveTable, generate });
             >
                 <VxeColumn class-name="hover:cursor-pointer">
                     <template #default="{ row }: { row: TableInfo }">
-                        {{ `[${row.module}] ${row.table} : ${row.model}` }}
+                        <span>{{ `[${row.module}] ${row.table} : ${row.model}` }}</span>
+                        <span v-if="syncList.includes(row)" class="color-red">（同步中）</span>
                     </template>
                 </VxeColumn>
             </VxeTable>

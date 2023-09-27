@@ -76,9 +76,7 @@ async function editProperty(tableInfo?: TableInfo, backFun?: Function) {
  */
 async function saveTable(tableInfo: TableInfo) {
     if (tableInfo.module !== tmpTableInfo.module) {
-        setLoading(true, { title: '保存中...' });
-        await sideListRef.value?.saveTable(tableInfo);
-        setLoading(false);
+        sideListRef.value?.saveTable(tableInfo);
     }
 }
 
