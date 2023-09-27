@@ -419,6 +419,14 @@ export type RowVO = {
                         <VxeCheckbox v-model="row.required"></VxeCheckbox>
                     </template>
                 </VxeColumn>
+                <VxeColumn field="unique" title="唯一" width="60" :edit-render="{}">
+                    <template #default="{ row }: { row: RowVO }">
+                        <VxeCheckbox v-model="row.unique"></VxeCheckbox>
+                    </template>
+                    <template #edit="{ row }: { row: RowVO }">
+                        <VxeCheckbox v-model="row.unique"></VxeCheckbox>
+                    </template>
+                </VxeColumn>
             </VxeTable>
         </div>
         <Preview v-model="previewVisible" :text="previewText" title="预览" />

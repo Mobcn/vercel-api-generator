@@ -111,6 +111,8 @@ export type TableProperty = {
     default?: any;
     /** 是否非空 */
     required?: boolean;
+    /** 唯一索引 */
+    unique?: string | number;
     /** 是否全部转为小写（type为String时生效） */
     lowercase?: boolean;
     /** 是否全部转为大写（type为String时生效） */
